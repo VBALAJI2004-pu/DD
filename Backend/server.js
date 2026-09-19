@@ -36,6 +36,7 @@ app.use(
       "http://127.0.0.1:3000",
       "https://ttdashboard.onrender.com",
       "https://ttdashboard04.onrender.com",
+      "https://dd-1-od3e.onrender.com",
     ],
     credentials: true,
   }),
