@@ -3,7 +3,7 @@ import axios from "axios";
 const axiosInstance = axios.create({
   // Development URL - change to production URL when deploying
   // baseURL: "http://localhost:5000/api",
-  baseURL: "http://localhost:5000/api",
+  baseURL: "https://dd-qghb.onrender.com/api",
 });
 
 // Export base URL for image uploads (without /api)
