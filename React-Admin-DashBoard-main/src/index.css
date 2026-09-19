@@ -1,0 +1,506 @@
+@import url("https://fonts.googleapis.com/css2?family=Delicious+Handrawn&display=swap");
+body {
+  margin: 0;
+  padding: 0;
+  font-family: "Open Sans", sans-serif;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: system-ui, sans-serif;
+  }
+}
+
+@layer components {
+  .main-content-mobile {
+    @apply mt-32 md:mt-28 transition-all duration-300;
+  }
+
+  /* AddExpense page specific margins */
+  .main-content-mobile .add-expense-page {
+    @apply mt-56 sm:mt-52 md:mt-48 lg:mt-44;
+  }
+
+  /* AddExpense form responsive improvements */
+  .add-expense-page form {
+    @apply space-y-4 sm:space-y-6;
+  }
+
+  .add-expense-page .grid {
+    @apply gap-4 sm:gap-6;
+  }
+
+  .add-expense-page input,
+  .add-expense-page select,
+  .add-expense-page textarea {
+    @apply text-sm sm:text-base;
+  }
+
+  /* Ensure form content is visible */
+  .add-expense-page h2 {
+    @apply text-xl sm:text-2xl font-bold mb-4 sm:mb-6;
+  }
+
+  .add-expense-page h6 {
+    @apply text-sm sm:text-base font-semibold mb-3 sm:mb-4;
+  }
+
+  /* Pie Chart page specific margins */
+  .main-content-mobile .pie-chart-page {
+    @apply mt-56 sm:mt-52 md:mt-48 lg:mt-44;
+  }
+
+  /* Pie Chart content improvements */
+  .pie-chart-page .charts-header {
+    @apply text-sm sm:text-base md:text-lg;
+  }
+
+  .pie-chart-page .chart-container {
+    @apply mt-4 sm:mt-6;
+  }
+
+  .pie-chart-page .table-container {
+    @apply mt-4 sm:mt-6 overflow-x-auto;
+  }
+
+  /* Pie Chart responsive sizing */
+  .pie-chart-page .chart-container {
+    @apply flex justify-center items-center;
+  }
+
+  .pie-chart-page .chart-container canvas {
+    @apply w-full;
+  }
+
+  /* Small screen pie chart improvements */
+  @media (max-width: 640px) {
+    .pie-chart-page .chart-container {
+      @apply w-full px-2;
+    }
+
+    .pie-chart-page .chart-container canvas {
+      @apply w-full max-w-full;
+    }
+
+    .pie-chart-page {
+      @apply pt-4;
+    }
+
+    .pie-chart-page .charts-header {
+      @apply text-base;
+    }
+
+    .pie-chart-page .chart-container > div {
+      @apply w-full max-w-[320px];
+    }
+
+    .pie-chart-page .chart-container svg {
+      @apply max-w-full;
+    }
+
+    .pie-chart-page .chart-container {
+      @apply min-h-[450px];
+    }
+  }
+
+  /* Medium and large screen pie chart improvements */
+  @media (min-width: 641px) {
+    .pie-chart-page .chart-container > div {
+      @apply w-full;
+    }
+
+    .pie-chart-page .chart-container {
+      @apply min-h-[500px];
+    }
+  }
+
+  /* Large screen pie chart improvements */
+  @media (min-width: 1024px) {
+    .pie-chart-page .chart-container {
+      @apply min-h-[550px];
+    }
+  }
+
+  /* Pie Chart legend improvements */
+  .pie-chart-page .e-legend {
+    @apply mt-4 text-center;
+  }
+
+  .pie-chart-page .e-legend-item {
+    @apply text-sm sm:text-base;
+  }
+
+  /* Ensure pie chart is centered and visible */
+  .pie-chart-page .chart-container svg {
+    @apply mx-auto;
+  }
+
+  .pie-chart-page .chart-container .e-chart {
+    @apply flex justify-center;
+  }
+
+  /* Fixed pie chart width and centering */
+  .pie-chart-page .chart-container > div > div {
+    @apply flex justify-center;
+  }
+
+  /* Ensure chart maintains fixed width */
+  .pie-chart-page .chart-container .e-chart-container {
+    @apply flex justify-center;
+  }
+
+  .pie-chart-page .chart-container .e-chart-container svg {
+    @apply max-w-none;
+  }
+
+  /* Ensure legend visibility */
+  .pie-chart-page .e-legend {
+    @apply block;
+  }
+
+  .pie-chart-page .e-legend-item {
+    @apply block;
+  }
+
+  /* Syncfusion chart responsive improvements */
+  .pie-chart-page .e-accumulationchart {
+    @apply w-full;
+  }
+
+  .pie-chart-page .e-accumulationchart svg {
+    @apply w-full max-w-full;
+  }
+
+  .pie-chart-page .e-accumulationchart .e-legend {
+    @apply w-full;
+  }
+
+  /* Legend positioning and styling */
+  .pie-chart-page .e-legend {
+    @apply mt-6 text-center;
+  }
+
+  .pie-chart-page .e-legend-item {
+    @apply text-sm sm:text-base;
+  }
+
+  /* Remove tooltips from legend */
+  .pie-chart-page .e-legend-item:hover {
+    @apply cursor-default;
+  }
+
+  /* Improved legend positioning for small screens */
+  .pie-chart-page .e-legend-container {
+    @apply flex justify-center items-center;
+  }
+
+  .pie-chart-page .e-legend-item {
+    @apply inline-block mx-1 mb-1;
+  }
+
+  /* Small screen legend improvements */
+  @media (max-width: 640px) {
+    .pie-chart-page .e-legend {
+      @apply mt-4 text-center block;
+    }
+
+    .pie-chart-page .e-legend-item {
+      @apply text-xs block;
+    }
+
+    .pie-chart-page .chart-container {
+      @apply min-h-[450px];
+    }
+
+    .pie-chart-page .chart-container > div {
+      @apply overflow-visible;
+    }
+
+    /* Ensure legend is visible */
+    .pie-chart-page .e-legend-container {
+      @apply block mt-4 flex justify-center;
+    }
+
+    .pie-chart-page .e-legend-item {
+      @apply inline-block mx-1 mb-1 text-xs;
+    }
+
+    /* Ensure chart doesn't overflow */
+    .pie-chart-page .chart-container .e-chart {
+      @apply w-full max-w-full;
+    }
+
+    .pie-chart-page .chart-container .e-chart svg {
+      @apply w-full max-w-full;
+    }
+  }
+
+  /* Table responsive improvements */
+  .pie-chart-page table {
+    @apply text-xs sm:text-sm md:text-base;
+  }
+
+  .pie-chart-page th,
+  .pie-chart-page td {
+    @apply px-2 sm:px-3 md:px-4 py-2;
+  }
+
+  .pie-chart-page .table-wrapper {
+    @apply overflow-x-auto;
+  }
+
+  .sidebar-expanded {
+    @apply ml-0 md:ml-64;
+  }
+
+  .sidebar-collapsed {
+    @apply ml-0;
+  }
+
+  .navbar-container {
+    @apply w-full transition-all duration-300;
+  }
+
+  .navbar-container.sidebar-expanded {
+    @apply md:ml-64 md:w-[calc(100vw-16rem)] md:max-w-[calc(100vw-16rem)];
+  }
+
+  .navbar-container.sidebar-collapsed {
+    @apply ml-0 w-full;
+  }
+
+  .navbar-mobile {
+    @apply min-h-[3rem] md:min-h-[4rem] w-full;
+  }
+
+  .navbar-left-section {
+    @apply flex-1 min-w-0;
+  }
+
+  .navbar-right-section {
+    @apply flex-shrink-0;
+    min-width: fit-content;
+  }
+
+  .date-inputs-mobile {
+    @apply flex-wrap;
+  }
+
+  .profile-dropdown {
+    @apply absolute top-full right-0 mt-2 bg-white dark:bg-secondary-dark-bg rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-[60];
+  }
+
+  /* Ensure profile dropdown is properly positioned on all screens */
+  .profile-dropdown {
+    position: absolute !important;
+    top: 100% !important;
+    right: 0 !important;
+    margin-top: 0.5rem !important;
+    z-index: 9999 !important;
+    max-height: 80vh !important;
+    overflow: visible !important;
+  }
+
+  /* Ensure profile section is always visible */
+  .navbar-right-section {
+    @apply flex-shrink-0;
+    min-width: fit-content;
+  }
+
+  /* Large screen specific profile visibility */
+  @media (min-width: 1025px) {
+    .navbar-right-section {
+      @apply flex-shrink-0;
+      min-width: fit-content;
+      position: relative;
+      z-index: 10;
+    }
+  }
+
+  .ecommerce-cards {
+    @apply grid-cols-1 sm:grid-cols-2 lg:grid-cols-4;
+  }
+
+  .ecommerce-card {
+    @apply p-4 sm:p-6;
+  }
+
+  /* Chart scrolling improvements */
+  .chart-container {
+    @apply relative overflow-hidden;
+  }
+
+  .chart-scroll-container {
+    @apply overflow-x-auto overflow-y-hidden;
+    scrollbar-width: thin;
+    scrollbar-color: #9ca3af #e5e7eb;
+  }
+
+  .chart-scroll-container::-webkit-scrollbar {
+    height: 8px;
+  }
+
+  .chart-scroll-container::-webkit-scrollbar-track {
+    background: #e5e7eb;
+    border-radius: 4px;
+  }
+
+  .chart-scroll-container::-webkit-scrollbar-thumb {
+    background: #9ca3af;
+    border-radius: 4px;
+  }
+
+  .chart-scroll-container::-webkit-scrollbar-thumb:hover {
+    background: #6b7280;
+  }
+
+  /* Dark mode chart scrollbar */
+  .dark .chart-scroll-container {
+    scrollbar-color: #6b7280 #4b5563;
+  }
+
+  .dark .chart-scroll-container::-webkit-scrollbar-track {
+    background: #4b5563;
+  }
+
+  .dark .chart-scroll-container::-webkit-scrollbar-thumb {
+    background: #6b7280;
+  }
+
+  .dark .chart-scroll-container::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 640px) {
+    .main-content-mobile {
+      @apply mt-48;
+    }
+
+    .navbar-mobile {
+      @apply min-h-[3rem];
+    }
+
+    .navbar-left-section {
+      @apply flex-row items-center gap-1;
+    }
+
+    .date-inputs-mobile {
+      @apply flex-row items-center gap-1;
+    }
+
+    .ecommerce-cards {
+      @apply grid-cols-1 gap-4;
+    }
+
+    .ecommerce-card {
+      @apply p-4;
+    }
+
+    .profile-dropdown {
+      @apply w-48 p-2;
+      position: absolute !important;
+      top: 100% !important;
+      right: 0 !important;
+      width: calc(100vw - 1rem) !important;
+      max-width: 20rem !important;
+      z-index: 9999 !important;
+      max-height: 80vh !important;
+      overflow: visible !important;
+      pointer-events: auto !important;
+    }
+
+    /* Mobile navbar doesn't adjust for sidebar */
+    .navbar-container.sidebar-expanded,
+    .navbar-container.sidebar-collapsed {
+      @apply ml-0 w-full;
+    }
+  }
+
+  @media (min-width: 641px) and (max-width: 1024px) {
+    .main-content-mobile {
+      @apply mt-48;
+    }
+
+    .ecommerce-cards {
+      @apply grid-cols-2 gap-4;
+    }
+
+    .ecommerce-card {
+      @apply p-4;
+    }
+  }
+
+  /* Large screen navbar adjustments */
+  @media (min-width: 1025px) {
+    .main-content-mobile {
+      @apply mt-44;
+    }
+
+    .navbar-container.sidebar-expanded {
+      @apply ml-64 w-[calc(100vw-16rem)] max-w-[calc(100vw-16rem)] right-0;
+    }
+
+    .navbar-container.sidebar-collapsed {
+      @apply ml-0 w-full left-0;
+    }
+
+    .navbar-left-section {
+      @apply flex-row items-center gap-4;
+    }
+
+    .date-inputs-mobile {
+      @apply flex-row items-center gap-2;
+    }
+
+    /* Ensure profile section is always visible on large screens */
+    .navbar-right-section {
+      @apply flex-shrink-0;
+      min-width: fit-content;
+      position: relative;
+      z-index: 10;
+    }
+
+    /* Ensure navbar content is properly distributed */
+    .navbar-mobile {
+      @apply w-full;
+    }
+  }
+
+  /* Ensure sidebar is above navbar on small screens */
+  @media (max-width: 900px) {
+    .sidebar-container {
+      @apply z-50;
+    }
+
+    .navbar-container {
+      @apply z-40;
+    }
+  }
+
+  /* Smooth transitions */
+  .transition-all {
+    transition-property: all;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 300ms;
+  }
+
+  /* Custom scrollbar */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Tooltip styles */
+  .my-tooltip {
+    @apply bg-gray-800 text-white text-xs rounded py-1 px-2;
+  }
+}
