@@ -31,12 +31,15 @@ const storage = multer.diskStorage({
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + "-" + file.originalname.replace(/\s+/g, "_"));
+    const safeName = path
+      .basename(file.originalname || "upload")
+      .replace(/[^a-zA-Z0-9._-]/g, "_");
+    cb(null, `${uniqueSuffix}-${safeName}`);
   },
 });
 
 function fileFilter(req, file, cb) {
-  const allowedTypes = [
+  const allowedAttachmentTypes = [
     "image/jpeg",
     "image/png",
     "image/gif",
@@ -46,7 +49,24 @@ function fileFilter(req, file, cb) {
     "application/msword",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   ];
-  if (allowedTypes.includes(file.mimetype)) {
+  const allowedReceiptTypes = [
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/jpg",
+    "application/pdf",
+  ];
+
+  if (file.fieldname === "paymentReceipt") {
+    if (allowedReceiptTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Payment receipt must be JPG, JPEG, PNG, WEBP, or PDF."), false);
+    }
+    return;
+  }
+
+  if (allowedAttachmentTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
     cb(new Error("Only images, PDFs, and Word files are allowed!"), false);
@@ -59,7 +79,23 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
 });
 
-router.post("/add-sales", authenticateToken, requireStaffOrAbove, upload.single("file"), createSales);
+router.post(
+  "/add-sales",
+  authenticateToken,
+  requireStaffOrAbove,
+  (req, res, next) => {
+    upload.fields([
+      { name: "file", maxCount: 1 },
+      { name: "paymentReceipt", maxCount: 1 },
+    ])(req, res, (err) => {
+      if (err) {
+        return res.status(400).json({ error: err.message });
+      }
+      next();
+    });
+  },
+  createSales
+);
 router.get("/monthly-sales", authenticateToken, requireStaffOrAbove, getMonthlySales);
 router.get("/sales-pie-chart-data", authenticateToken, requireStaffOrAbove, getSalesPieChartData);
 router.get("/yearly-sales", authenticateToken, requireStaffOrAbove, getYearlySalesSummary);

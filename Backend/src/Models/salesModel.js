@@ -36,6 +36,37 @@ const salesSchema = new mongoose.Schema(
     },
     remarks: String,
     fileUrl: String,
+    orderDate: {
+      type: Date,
+    },
+    orderId: {
+      type: String,
+    },
+    orderAmount: {
+      type: Number,
+      min: 0,
+    },
+    paymentReceived: {
+      type: String,
+      enum: ["yes", "no", ""],
+      default: "",
+    },
+    amountPaid: {
+      type: Number,
+      min: 0,
+    },
+    paymentMode: {
+      type: String,
+      enum: ["Cash", "UPI", "Bank Transfer", "Card", "Cheque", "Other", "Online", ""],
+    },
+    paymentReceipt: {
+      type: String,
+    },
+    paymentStatus: {
+      type: String,
+      enum: ["none", "partial", "full", "unknown", ""],
+      default: "",
+    },
   },
   { timestamps: true }
 );

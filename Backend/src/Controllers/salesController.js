@@ -2,18 +2,189 @@ import Sales from "../Models/salesModel.js";
 import fs from "fs";
 import path from "path";
 
-export const createSales = async (req, res) => {
+const ALLOWED_PAYMENT_MODES = [
+  "Cash",
+  "UPI",
+  "Bank Transfer",
+  "Card",
+  "Cheque",
+  "Other",
+  "Online",
+];
+
+const RECEIPT_MIME_TYPES = [
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp",
+  "application/pdf",
+];
+
+function getUploadedFile(req, fieldName) {
+  if (req.files && req.files[fieldName] && req.files[fieldName][0]) {
+    return req.files[fieldName][0];
+  }
+  if (fieldName === "file" && req.file) {
+    return req.file;
+  }
+  return null;
+}
+
+export function unlinkUploadedFile(file) {
+  if (!file || !file.path) return;
   try {
-    let fileUrl = req.body.fileUrl;
-    if (req.file) {
-      // File uploaded, set fileUrl to public path
-      fileUrl = `/uploads/${req.file.filename}`;
+    if (fs.existsSync(file.path)) {
+      fs.unlinkSync(file.path);
+    }
+  } catch (err) {
+    console.error("Failed to clean up uploaded file:", err.message);
+  }
+}
+
+export function cleanupNewUploads(files) {
+  (files || []).forEach(unlinkUploadedFile);
+}
+
+function publicUploadPath(file) {
+  return `/uploads/${path.basename(file.filename)}`;
+}
+
+export function parseOptionalNumber(value) {
+  if (value === undefined || value === null || value === "") return undefined;
+  const parsed = Number(value);
+  if (Number.isNaN(parsed)) return NaN;
+  return parsed;
+}
+
+export function parseOptionalDate(value) {
+  if (value === undefined || value === null || value === "") return undefined;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed;
+}
+
+export function computeSalePaymentStatus(paymentReceived, amountPaid, orderAmount) {
+  const received = String(paymentReceived || "").toLowerCase();
+  if (received === "no") return "none";
+  if (received !== "yes") return "";
+
+  if (amountPaid === undefined || amountPaid === null || amountPaid === "") {
+    return "";
+  }
+  const paid = Number(amountPaid);
+  if (Number.isNaN(paid) || paid <= 0) return "";
+
+  if (orderAmount === undefined || orderAmount === null || orderAmount === "") {
+    return "unknown";
+  }
+  const total = Number(orderAmount);
+  if (Number.isNaN(total)) return "unknown";
+  if (paid >= total) return "full";
+  return "partial";
+}
+
+export const createSales = async (req, res) => {
+  const attachmentFile = getUploadedFile(req, "file");
+  const receiptFile = getUploadedFile(req, "paymentReceipt");
+  const newUploads = [attachmentFile, receiptFile];
+
+  try {
+    if (receiptFile && !RECEIPT_MIME_TYPES.includes(receiptFile.mimetype)) {
+      cleanupNewUploads(newUploads);
+      return res.status(400).json({
+        error: "Payment receipt must be a JPG, JPEG, PNG, WEBP, or PDF file.",
+      });
     }
 
-    const sales = new Sales({ ...req.body, fileUrl });
+    const {
+      date,
+      openingCash,
+      purchaseCash,
+      onlineCash,
+      physicalCash,
+      cashTransferred,
+      closingCash,
+      totalSales,
+      remarks,
+      orderDate,
+      orderId,
+      orderAmount,
+      paymentReceived,
+      amountPaid,
+      paymentMode,
+    } = req.body;
+
+    const parsedOrderDate = parseOptionalDate(orderDate);
+    if (parsedOrderDate === null) {
+      cleanupNewUploads(newUploads);
+      return res.status(400).json({ error: "Order date must be a valid date." });
+    }
+
+    const parsedOrderAmount = parseOptionalNumber(orderAmount);
+    if (Number.isNaN(parsedOrderAmount) || (parsedOrderAmount !== undefined && parsedOrderAmount < 0)) {
+      cleanupNewUploads(newUploads);
+      return res.status(400).json({ error: "Order amount must be a valid non-negative number." });
+    }
+
+    const received = String(paymentReceived || "").toLowerCase();
+    if (received && received !== "yes" && received !== "no") {
+      cleanupNewUploads(newUploads);
+      return res.status(400).json({ error: "Payment received must be Yes or No." });
+    }
+
+    let parsedAmountPaid;
+    if (received === "yes") {
+      parsedAmountPaid = parseOptionalNumber(amountPaid);
+      if (Number.isNaN(parsedAmountPaid) || (parsedAmountPaid !== undefined && parsedAmountPaid < 0)) {
+        cleanupNewUploads(newUploads);
+        return res.status(400).json({ error: "Amount paid must be a valid non-negative number." });
+      }
+    }
+
+    const hasValidPayment = received === "yes" && parsedAmountPaid > 0;
+    const cleanedPaymentMode = hasValidPayment && paymentMode ? paymentMode : undefined;
+    if (cleanedPaymentMode && !ALLOWED_PAYMENT_MODES.includes(cleanedPaymentMode)) {
+      cleanupNewUploads(newUploads);
+      return res.status(400).json({ error: "Invalid payment mode." });
+    }
+
+    const salesData = {
+      date,
+      openingCash,
+      purchaseCash,
+      onlineCash,
+      physicalCash,
+      cashTransferred,
+      closingCash,
+      totalSales,
+      remarks,
+      paymentReceived: received || "",
+      paymentStatus: computeSalePaymentStatus(received, parsedAmountPaid, parsedOrderAmount),
+    };
+
+    if (attachmentFile) {
+      salesData.fileUrl = publicUploadPath(attachmentFile);
+    }
+
+    if (parsedOrderDate) salesData.orderDate = parsedOrderDate;
+    if (orderId && String(orderId).trim() !== "") {
+      salesData.orderId = String(orderId).trim();
+    }
+    if (parsedOrderAmount !== undefined) salesData.orderAmount = parsedOrderAmount;
+
+    if (hasValidPayment) {
+      salesData.amountPaid = parsedAmountPaid;
+      if (cleanedPaymentMode) salesData.paymentMode = cleanedPaymentMode;
+      if (receiptFile) salesData.paymentReceipt = publicUploadPath(receiptFile);
+    } else if (receiptFile) {
+      unlinkUploadedFile(receiptFile);
+    }
+
+    const sales = new Sales(salesData);
     await sales.save();
     res.status(201).json({ sales, message: "Sales created successfully" });
   } catch (err) {
+    cleanupNewUploads(newUploads);
     res.status(400).json({ error: err.message });
   }
 };
@@ -383,6 +554,14 @@ export const deleteSales = async (req, res) => {
       );
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
+      }
+    }
+    if (sales.paymentReceipt) {
+      const receiptPath = path.resolve(
+        "./uploads" + sales.paymentReceipt.replace("/uploads", "")
+      );
+      if (fs.existsSync(receiptPath)) {
+        fs.unlinkSync(receiptPath);
       }
     }
     await Sales.findByIdAndDelete(id);
