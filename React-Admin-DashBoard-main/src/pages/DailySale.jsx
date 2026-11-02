@@ -21,6 +21,7 @@ const DailySale = () => {
   const salesFileInputRef = useRef(null);
   const paymentReceiptInputRef = useRef(null);
   const orderFileInputRef = useRef(null);
+  const orderReceiptInputRef = useRef(null);
   const RECEIPT_MAX_SIZE = 10 * 1024 * 1024;
   const RECEIPT_TYPES = [
     "image/jpeg",
@@ -36,6 +37,15 @@ const DailySale = () => {
     "Card",
     "Cheque",
     "Other",
+  ];
+  const ORDER_PAYMENT_MODES = [
+    "Cash",
+    "UPI",
+    "Bank Transfer",
+    "Card",
+    "Cheque",
+    "Other",
+    "Online",
   ];
 
   // Today's date in YYYY-MM-DD for max attribute of date inputs
@@ -87,6 +97,9 @@ const DailySale = () => {
     paymentMode: "",
     file: null,
     remarks: "",
+    paymentReceived: "",
+    amountPaid: "",
+    paymentReceipt: null,
   });
 
   const isValidAmountPaid = (value) => {
@@ -97,6 +110,10 @@ const DailySale = () => {
 
   const clearReceiptInput = () => {
     if (paymentReceiptInputRef.current) paymentReceiptInputRef.current.value = "";
+  };
+
+  const clearOrderReceiptInput = () => {
+    if (orderReceiptInputRef.current) orderReceiptInputRef.current.value = "";
   };
 
   const receiptPreviewUrl = useMemo(() => {
@@ -115,6 +132,23 @@ const DailySale = () => {
       if (receiptPreviewUrl) URL.revokeObjectURL(receiptPreviewUrl);
     };
   }, [receiptPreviewUrl]);
+
+  const orderReceiptPreviewUrl = useMemo(() => {
+    if (
+      orderForm.paymentReceipt &&
+      orderForm.paymentReceipt.type &&
+      orderForm.paymentReceipt.type.startsWith("image/")
+    ) {
+      return URL.createObjectURL(orderForm.paymentReceipt);
+    }
+    return "";
+  }, [orderForm.paymentReceipt]);
+
+  useEffect(() => {
+    return () => {
+      if (orderReceiptPreviewUrl) URL.revokeObjectURL(orderReceiptPreviewUrl);
+    };
+  }, [orderReceiptPreviewUrl]);
 
   const handleSalesFormChange = (e) => {
     const { name, value, type, files } = e.target;
@@ -176,6 +210,56 @@ const DailySale = () => {
 
   const handleOrderFormChange = (e) => {
     const { name, value, type, files } = e.target;
+
+    if (name === "paymentReceipt") {
+      const selected = files && files[0] ? files[0] : null;
+      if (!selected) {
+        setOrderForm((prev) => ({ ...prev, paymentReceipt: null }));
+        return;
+      }
+      const extension = selected.name.split(".").pop()?.toLowerCase();
+      const allowedExtensions = ["jpg", "jpeg", "png", "webp", "pdf"];
+      if (
+        !RECEIPT_TYPES.includes(selected.type) &&
+        !allowedExtensions.includes(extension)
+      ) {
+        alert("Payment receipt must be a JPG, JPEG, PNG, WEBP, or PDF file.");
+        clearOrderReceiptInput();
+        return;
+      }
+      if (selected.size > RECEIPT_MAX_SIZE) {
+        alert("Payment receipt must be 10MB or smaller.");
+        clearOrderReceiptInput();
+        return;
+      }
+      setOrderForm((prev) => ({ ...prev, paymentReceipt: selected }));
+      return;
+    }
+
+    if (name === "paymentReceived") {
+      setOrderForm((prev) => ({
+        ...prev,
+        paymentReceived: value,
+        ...(value !== "yes"
+          ? { amountPaid: "", paymentMode: "", paymentReceipt: null }
+          : {}),
+      }));
+      if (value !== "yes") clearOrderReceiptInput();
+      return;
+    }
+
+    if (name === "amountPaid") {
+      setOrderForm((prev) => ({
+        ...prev,
+        amountPaid: value,
+        ...(!isValidAmountPaid(value)
+          ? { paymentMode: "", paymentReceipt: null }
+          : {}),
+      }));
+      if (!isValidAmountPaid(value)) clearOrderReceiptInput();
+      return;
+    }
+
     setOrderForm((prev) => ({
       ...prev,
       [name]: type === "file" ? files[0] : value,
@@ -245,9 +329,35 @@ const DailySale = () => {
 
   const handleOrderSubmit = async (e) => {
     e.preventDefault();
+
+    if (orderForm.amount !== "") {
+      const parsedAmount = Number(orderForm.amount);
+      if (Number.isNaN(parsedAmount) || parsedAmount < 0) {
+        alert("Amount must be a valid non-negative number.");
+        return;
+      }
+    }
+    if (orderForm.paymentReceived === "yes" && orderForm.amountPaid !== "") {
+      const parsedAmountPaid = Number(orderForm.amountPaid);
+      if (Number.isNaN(parsedAmountPaid) || parsedAmountPaid < 0) {
+        alert("Amount paid must be a valid non-negative number.");
+        return;
+      }
+    }
+
+    const payload = { ...orderForm };
+    if (payload.paymentReceived !== "yes") {
+      payload.amountPaid = "";
+      payload.paymentMode = "";
+      payload.paymentReceipt = null;
+    } else if (!isValidAmountPaid(payload.amountPaid)) {
+      payload.paymentMode = "";
+      payload.paymentReceipt = null;
+    }
+
     setLoading(true);
     try {
-      await addOrder(orderForm);
+      await addOrder(payload);
       // Reset form
       setOrderForm({
         orderDate: "",
@@ -257,9 +367,13 @@ const DailySale = () => {
         paymentMode: "",
         file: null,
         remarks: "",
+        paymentReceived: "",
+        amountPaid: "",
+        paymentReceipt: null,
       });
       setShowOrderForm(false);
       if (orderFileInputRef.current) orderFileInputRef.current.value = "";
+      if (orderReceiptInputRef.current) orderReceiptInputRef.current.value = "";
     } catch (err) {
       // error toast handled in store
     } finally {
@@ -817,14 +931,13 @@ const DailySale = () => {
                 <form onSubmit={handleOrderSubmit} className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Order Date <span className="text-red-500">*</span>
+                      Order Date
                     </label>
                     <input
                       type="date"
                       name="orderDate"
                       value={orderForm.orderDate}
                       onChange={handleOrderFormChange}
-                      required
                       max={today}
                       className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                         currentMode === "Dark"
@@ -854,14 +967,13 @@ const DailySale = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Order ID <span className="text-red-500">*</span>
+                        Order ID
                       </label>
                       <input
                         type="text"
                         name="orderId"
                         value={orderForm.orderId}
                         onChange={handleOrderFormChange}
-                        required
                         className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                           currentMode === "Dark"
                             ? "bg-gray-700 border-gray-600 text-white"
@@ -871,7 +983,7 @@ const DailySale = () => {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Amount <span className="text-red-500">*</span>
+                        Amount
                       </label>
                       <input
                         type="number"
@@ -880,7 +992,6 @@ const DailySale = () => {
                         onChange={handleOrderFormChange}
                         min="0"
                         step="0.01"
-                        required
                         className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                           currentMode === "Dark"
                             ? "bg-gray-700 border-gray-600 text-white"
@@ -892,24 +1003,182 @@ const DailySale = () => {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Payment Mode <span className="text-red-500">*</span>
+                      Has any payment been received?
                     </label>
                     <select
-                      name="paymentMode"
-                      value={orderForm.paymentMode}
+                      name="paymentReceived"
+                      value={orderForm.paymentReceived}
                       onChange={handleOrderFormChange}
-                      required
                       className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                         currentMode === "Dark"
                           ? "bg-gray-700 border-gray-600 text-white"
                           : "bg-white text-gray-900"
                       }`}
                     >
-                      <option value="">Select Payment Mode</option>
-                      <option value="Cash">Cash</option>
-                      <option value="Online">Online</option>
+                      <option value="">Select</option>
+                      <option value="yes">Yes</option>
+                      <option value="no">No</option>
                     </select>
                   </div>
+
+                  {orderForm.paymentReceived === "yes" && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Amount Paid
+                      </label>
+                      <input
+                        type="number"
+                        name="amountPaid"
+                        value={orderForm.amountPaid}
+                        onChange={handleOrderFormChange}
+                        min="0"
+                        step="0.01"
+                        className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                          currentMode === "Dark"
+                            ? "bg-gray-700 border-gray-600 text-white"
+                            : "bg-white text-gray-900"
+                        }`}
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Partial payments are allowed and do not need to match the order amount.
+                      </p>
+                    </div>
+                  )}
+
+                  {orderForm.paymentReceived === "yes" &&
+                    isValidAmountPaid(orderForm.amountPaid) && (
+                      <>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Payment Mode
+                          </label>
+                          <select
+                            name="paymentMode"
+                            value={orderForm.paymentMode}
+                            onChange={handleOrderFormChange}
+                            className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                              currentMode === "Dark"
+                                ? "bg-gray-700 border-gray-600 text-white"
+                                : "bg-white text-gray-900"
+                            }`}
+                          >
+                            <option value="">Select Payment Mode</option>
+                            {ORDER_PAYMENT_MODES.map((mode) => (
+                              <option key={mode} value={mode}>
+                                {mode}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Payment Receipt
+                          </label>
+                          <div className="flex flex-wrap gap-2">
+                            <input
+                              type="file"
+                              name="paymentReceipt"
+                              accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf"
+                              onChange={handleOrderFormChange}
+                              className={`flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                                currentMode === "Dark"
+                                  ? "bg-gray-700 border-gray-600 text-white"
+                                  : "bg-white text-gray-900"
+                              }`}
+                              ref={orderReceiptInputRef}
+                            />
+                            {orderForm.paymentReceipt && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const fileUrl = URL.createObjectURL(
+                                      orderForm.paymentReceipt
+                                    );
+                                    setAttachmentModal({
+                                      isOpen: true,
+                                      fileUrl,
+                                      fileName: orderForm.paymentReceipt.name,
+                                    });
+                                  }}
+                                  className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center gap-1"
+                                >
+                                  <FiEye size={16} />
+                                  View
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOrderForm((prev) => ({
+                                      ...prev,
+                                      paymentReceipt: null,
+                                    }));
+                                    clearOrderReceiptInput();
+                                  }}
+                                  className="px-3 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors flex items-center gap-1"
+                                >
+                                  <FiX size={16} />
+                                  Remove
+                                </button>
+                              </>
+                            )}
+                          </div>
+                          {orderForm.paymentReceipt && (
+                            <div className="mt-2">
+                              <p className="text-xs text-gray-500">
+                                Selected: {orderForm.paymentReceipt.name}
+                              </p>
+                              {orderReceiptPreviewUrl && (
+                                <img
+                                  src={orderReceiptPreviewUrl}
+                                  alt="Payment receipt preview"
+                                  className="mt-2 max-h-32 rounded-md border border-gray-300"
+                                />
+                              )}
+                            </div>
+                          )}
+                          <p className="text-xs text-gray-500 mt-1">
+                            Optional. Allowed: JPG, JPEG, PNG, WEBP, PDF. Max size: 10MB.
+                          </p>
+                        </div>
+                      </>
+                    )}
+
+                  {orderForm.paymentReceived === "no" && (
+                    <p className="text-xs text-gray-500">
+                      Payment status: No Payment
+                    </p>
+                  )}
+                  {orderForm.paymentReceived === "yes" &&
+                    !isValidAmountPaid(orderForm.amountPaid) && (
+                      <p className="text-xs text-gray-500">
+                        Payment status not established until an amount paid is entered.
+                      </p>
+                    )}
+                  {orderForm.paymentReceived === "yes" &&
+                    isValidAmountPaid(orderForm.amountPaid) &&
+                    orderForm.amount === "" && (
+                      <p className="text-xs text-gray-500">
+                        Payment Received – Completion Unknown
+                      </p>
+                    )}
+                  {orderForm.paymentReceived === "yes" &&
+                    isValidAmountPaid(orderForm.amountPaid) &&
+                    orderForm.amount !== "" &&
+                    Number(orderForm.amountPaid) >= Number(orderForm.amount) && (
+                      <p className="text-xs text-gray-500">
+                        Payment status: Fully Paid
+                      </p>
+                    )}
+                  {orderForm.paymentReceived === "yes" &&
+                    isValidAmountPaid(orderForm.amountPaid) &&
+                    orderForm.amount !== "" &&
+                    Number(orderForm.amountPaid) < Number(orderForm.amount) && (
+                      <p className="text-xs text-gray-500">
+                        Payment status: Partial Payment
+                      </p>
+                    )}
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">

@@ -4,27 +4,51 @@ const orderSchema = new mongoose.Schema(
   {
     orderDate: {
       type: Date,
-      required: true,
     },
     deliveryDate: {
       type: Date,
     },
     orderId: {
       type: String,
-      required: true,
       unique: true,
+      sparse: true,
     },
     amount: {
       type: Number,
-      required: true,
+      min: 0,
     },
     paymentMode: {
       type: String,
-      required: true,
-      enum: ["Cash", "Online"],
+      enum: [
+        "Cash",
+        "Online",
+        "UPI",
+        "Bank Transfer",
+        "Card",
+        "Cheque",
+        "Other",
+        "",
+      ],
     },
     remarks: String,
     fileUrl: String,
+    paymentReceived: {
+      type: String,
+      enum: ["yes", "no", ""],
+      default: "",
+    },
+    amountPaid: {
+      type: Number,
+      min: 0,
+    },
+    paymentReceipt: {
+      type: String,
+    },
+    paymentStatus: {
+      type: String,
+      enum: ["none", "partial", "full", "unknown", ""],
+      default: "",
+    },
   },
   { timestamps: true }
 );

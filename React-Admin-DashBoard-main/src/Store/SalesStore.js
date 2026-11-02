@@ -247,18 +247,28 @@ const useSalesStore = create((set, get) => ({
     try {
       let dataToSend = orderData;
       let config = {};
-      // If file is present, use FormData
-      if (orderData.file) {
+      const hasAttachment = Boolean(orderData.file);
+      const hasReceipt = Boolean(orderData.paymentReceipt);
+      if (hasAttachment || hasReceipt) {
         const formData = new FormData();
         Object.entries(orderData).forEach(([key, value]) => {
-          if (key === "file") {
+          if (key === "file" || key === "paymentReceipt") {
             if (value) formData.append(key, value);
           } else if (value !== undefined && value !== null && value !== "") {
             formData.append(key, String(value));
           }
         });
         dataToSend = formData;
-        config.headers = { "Content-Type": "multipart/form-data" };
+      } else {
+        const payload = { ...orderData };
+        delete payload.file;
+        delete payload.paymentReceipt;
+        Object.keys(payload).forEach((key) => {
+          if (payload[key] === undefined || payload[key] === null || payload[key] === "") {
+            delete payload[key];
+          }
+        });
+        dataToSend = payload;
       }
       const response = await axiosInstance.post(
         "/order/add-order",
